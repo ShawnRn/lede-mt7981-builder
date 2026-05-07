@@ -1,0 +1,363 @@
+name: LEDE Firmware Builder
+
+permissions:
+  contents: write
+
+concurrency:
+  group: lede-firmware-${{ github.ref }}
+  cancel-in-progress: false
+
+on:
+  schedule:
+    # Weekly build: Monday 04:00 Asia/Shanghai (Sunday 20:00 UTC)
+    - cron: '0 20 * * 0'
+  workflow_dispatch:
+    inputs:
+      device:
+        description: '编译设备型号'
+        required: true
+        type: choice
+        default: 'all'
+        options:
+          - 'TR3000-512MB'
+          - '360T7'
+          - 'all'
+      ssh:
+        description: '是否执行 make menuconfig (device 为 all 时无效)'
+        required: false
+        type: boolean
+        default: false
+      release:
+        description: '是否发布编译产物到 Release'
+        required: false
+        type: boolean
+        default: true
+
+env:
+  DEVICE_INPUT: ${{ github.event.inputs.device || 'all' }}
+  CCACHE_DIR: /workdir/.ccache
+  CCACHE_MAXSIZE: 2G
+  REPO_URL: https://github.com/coolsnowwolf/lede
+  REPO_BRANCH: master
+  FEEDS_CONF: feeds.conf.default
+  DIY_P1_SH: diy-part1.sh
+  DIY_P2_SH: diy-part2.sh
+  UPLOAD_RELEASE: ${{ github.event.inputs.release || 'true' }}
+  TZ: Asia/Shanghai
+
+jobs:
+  menuconfig:
+    name: ⚙️ Menuconfig & Push
+    if: github.event.inputs.ssh == 'true' && github.event.inputs.device != 'all'
+    runs-on: ubuntu-22.04
+    steps:
+      - name: 🙌 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🛠️ Init Environment
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libncurses-dev build-essential git wget python3 bzip2
+          sudo mkdir -p /workdir
+          sudo chown $USER:$GROUPS /workdir
+
+      - name: 🪜 Clone source code
+        working-directory: /workdir
+        run: |
+          git clone $REPO_URL -b $REPO_BRANCH --single-branch --filter=blob:none openwrt
+          ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
+
+      - name: 🔧 Set device variables
+        run: |
+          case "$DEVICE_INPUT" in
+            "TR3000-512MB") echo "CONFIG_FILE=config/tr3000-512mb.config" >> $GITHUB_ENV ;;
+            "360T7")       echo "CONFIG_FILE=config/360t7.config"       >> $GITHUB_ENV ;;
+          esac
+
+      - name: 👩‍💻 Copy previous config if exists
+        run: |
+          if [ -f "$GITHUB_WORKSPACE/${CONFIG_FILE}" ]; then
+            cp -f "$GITHUB_WORKSPACE/${CONFIG_FILE}" /workdir/openwrt/.config
+          fi
+
+      - name: ⚙️ Load custom feeds
+        run: |
+          [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
+          chmod +x $DIY_P1_SH
+          cd openwrt
+          $GITHUB_WORKSPACE/$DIY_P1_SH
+
+      - name: 🧬 Update & Install feeds
+        run: cd openwrt && ./scripts/feeds update -a && ./scripts/feeds install -a
+
+      - name: 🧩 Load custom configuration
+        run: |
+          [ -e $CONFIG_FILE ] && cp -f $CONFIG_FILE openwrt/.config
+          chmod +x $DIY_P2_SH
+          cd openwrt
+          $GITHUB_WORKSPACE/$DIY_P2_SH
+
+      - name: ⌨️ SSH connection to Menuconfig
+        uses: mxschmitt/action-tmate@v3
+        timeout-minutes: 15
+          
+      - name: 📤 Push config to main branch
+        run: |
+          SRC="/workdir/openwrt/.config"
+          DST="$GITHUB_WORKSPACE/${CONFIG_FILE}"
+          mkdir -p "$(dirname "$DST")"
+          cp -f "$SRC" "$DST"
+          cd "$GITHUB_WORKSPACE"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$CONFIG_FILE"
+          
+          CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          
+          git diff --cached --quiet || (
+            git commit -m "Update config: ${CONFIG_FILE}" || true
+            git pull --rebase origin $CURRENT_BRANCH
+            git push -f origin HEAD:$CURRENT_BRANCH
+          )
+
+  build:
+    name: 🔨 Build Firmware
+    needs: menuconfig
+    if: always() && (needs.menuconfig.result == 'success' || needs.menuconfig.result == 'skipped')
+    runs-on: ubuntu-22.04
+    
+    steps:
+      - name: 🙌 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🪠 Free Disk Space
+        run: |
+          echo "::group::Disk before cleanup"
+          df -hT
+          echo "::endgroup::"
+
+          sudo rm -rf \
+            /usr/share/dotnet \
+            /usr/local/lib/android \
+            /opt/ghc \
+            /opt/hostedtoolcache/CodeQL \
+            /usr/local/share/powershell || true
+          docker image prune -af >/dev/null 2>&1 || true
+          sudo swapoff -a || true
+
+          echo "::group::Disk after cleanup"
+          df -hT
+          echo "::endgroup::"
+
+      - name: 🛠️ Init Environment
+        run: |
+          sudo -E apt-get -qq update
+          sudo -E apt-get -qq install -y --no-install-recommends ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 ccache clang cmake cpio curl device-tree-compiler ecj fastjar flex gawk gettext gcc-multilib g++-multilib git gnutls-dev gperf haveged help2man intltool lib32gcc-s1 libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses-dev libpython3-dev libreadline-dev libssl-dev libtool libyaml-dev libz-dev lld llvm mkisofs msmtp ninja-build p7zip p7zip-full patch pkgconf python3 python3-ply python3-docutils python3-pyelftools qemu-utils re2c rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip wget xmlto xxd zlib1g-dev zstd
+          sudo timedatectl set-timezone "$TZ"
+          sudo mkdir -p /workdir
+          sudo chown $USER:$GROUPS /workdir
+
+      - name: 🪜 Clone source code
+        working-directory: /workdir
+        run: |
+          git clone $REPO_URL -b $REPO_BRANCH --single-branch --filter=blob:none openwrt
+          ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
+
+      - name: 📦 Restore DL cache
+        id: dl-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: /workdir/openwrt/dl
+          key: ${{ runner.os }}-lede-dl-${{ env.REPO_BRANCH }}-${{ github.run_id }}
+          restore-keys: |
+            ${{ runner.os }}-lede-dl-${{ env.REPO_BRANCH }}-
+
+      - name: 📦 Restore ccache
+        id: ccache-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: /workdir/.ccache
+          key: ${{ runner.os }}-lede-ccache-${{ env.REPO_BRANCH }}-${{ hashFiles('config/tr3000-512mb.config', 'config/360t7.config', 'diy-part1.sh', 'diy-part2.sh') }}-${{ github.run_id }}
+          restore-keys: |
+            ${{ runner.os }}-lede-ccache-${{ env.REPO_BRANCH }}-${{ hashFiles('config/tr3000-512mb.config', 'config/360t7.config', 'diy-part1.sh', 'diy-part2.sh') }}-
+            ${{ runner.os }}-lede-ccache-${{ env.REPO_BRANCH }}-
+
+      - name: 🔧 Configure ccache
+        run: |
+          ccache --set-config=max_size=$CCACHE_MAXSIZE
+          ccache --set-config=cache_dir=$CCACHE_DIR
+          ccache --set-config=compression=true
+          ccache -z
+
+      - name: 🧬 Update & Install feeds
+        run: |
+          cd openwrt
+          [ -e $GITHUB_WORKSPACE/$FEEDS_CONF ] && mv $GITHUB_WORKSPACE/$FEEDS_CONF feeds.conf.default
+          chmod +x $GITHUB_WORKSPACE/$DIY_P1_SH
+          $GITHUB_WORKSPACE/$DIY_P1_SH
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+          chmod +x $GITHUB_WORKSPACE/$DIY_P2_SH
+          $GITHUB_WORKSPACE/$DIY_P2_SH
+
+      - name: 🏷️ Inject Version Tag
+        run: |
+          BUILD_TIME=$(date +"%Y%m%d-%H%M")
+          RELEASE_TAG="LEDE-${BUILD_TIME}"
+          echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
+
+      - name: 🔨 Multi-Device Compilation Loop
+        id: compile
+        run: |
+          mark() {
+            echo "##[notice]$(date -u +'%Y-%m-%dT%H:%M:%SZ') $*"
+          }
+
+          elapsed() {
+            local start="$1"
+            local end
+            end=$(date +%s)
+            echo "$((end - start))"
+          }
+
+          # 1. 确定编译列表
+          if [ "${DEVICE_INPUT}" = "all" ]; then
+            DEVICES="TR3000-512MB 360T7"
+          else
+            DEVICES="${DEVICE_INPUT}"
+          fi
+
+          mkdir -p $GITHUB_WORKSPACE/firmware_collection
+          BUILD_TIMING="$GITHUB_WORKSPACE/firmware_collection/build-timing.tsv"
+          echo -e "device\tdefconfig_s\tdownload_s\tcompile_s\ttotal_s" > "$BUILD_TIMING"
+
+          cd /workdir/openwrt
+          NPROC=$(nproc)
+          mark "Build device list: $DEVICES"
+          ccache -s || true
+
+          for DEV in $DEVICES; do
+            echo "::group::🚀 Building $DEV"
+            DEV_START=$(date +%s)
+            
+            # 2. 设置当前设备配置文件
+            case "$DEV" in
+              "TR3000-512MB") CONFIG="config/tr3000-512mb.config" ;;
+              "360T7")       CONFIG="config/360t7.config"       ;;
+            esac
+            
+            echo "Using Config: $CONFIG"
+            
+            # 3. 加载配置
+            cp -f $GITHUB_WORKSPACE/$CONFIG .config
+            
+            # 4. 刷新配置并下载
+            mark "$DEV defconfig start"
+            STEP_START=$(date +%s)
+            make defconfig
+            DEFCONFIG_S=$(elapsed "$STEP_START")
+
+            mark "$DEV download start"
+            STEP_START=$(date +%s)
+            make download -j"$NPROC"
+            DOWNLOAD_S=$(elapsed "$STEP_START")
+            
+            # 5. 开始编译
+            mark "$DEV compile start"
+            STEP_START=$(date +%s)
+            if ! make -j"$NPROC" CC="ccache gcc" CXX="ccache g++"; then
+              echo "⚠️ Multi-threaded failed, retrying single-threaded..."
+              mark "$DEV single-thread retry start"
+              make -j1 V=s || exit 1
+            fi
+            COMPILE_S=$(elapsed "$STEP_START")
+            TOTAL_S=$(elapsed "$DEV_START")
+
+            echo "✅ $DEV build finished."
+            mark "$DEV compile done in ${COMPILE_S}s, total ${TOTAL_S}s"
+            echo -e "${DEV}\t${DEFCONFIG_S}\t${DOWNLOAD_S}\t${COMPILE_S}\t${TOTAL_S}" >> "$BUILD_TIMING"
+            ccache -s || true
+            df -hT /workdir
+            echo "::endgroup::"
+          done
+
+          echo "📥 Collecting artifacts"
+          find bin/targets/ -name "*sysupgrade.bin" -exec cp {} $GITHUB_WORKSPACE/firmware_collection/ \;
+          cat "$BUILD_TIMING"
+
+          echo "status=success" >> $GITHUB_OUTPUT
+
+      - name: 🪄 Upload Binaries (Artifacts)
+        uses: actions/upload-artifact@v4
+        if: steps.compile.outputs.status == 'success'
+        with:
+          name: LEDE_Combined_${{ env.DEVICE_INPUT }}_${{ env.REPO_BRANCH }}
+          path: ${{ github.workspace }}/firmware_collection/*
+
+      - name: 📌 Generate Release Tag
+        id: tag
+        if: steps.compile.outputs.status == 'success' && env.UPLOAD_RELEASE == 'true'
+        run: |
+          RELEASE_TAG="${{ env.RELEASE_TAG }}"
+          echo "release_tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
+
+          cat > release.txt << EOF
+          ## 📦 LEDE Firmware Release
+
+          **🏷️ Release:** $RELEASE_TAG
+          **👤 Maintainer:** Shawn Rain
+          **🌿 Source:** [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede) (master)
+          **📱 Devices:** ${DEVICE_INPUT}
+          **📅 Build Date:** $(date +"%Y-%m-%d %H:%M:%S")
+          **🔨 Compiler:** GCC with ccache
+
+          ## 📥 Download
+
+          Download the sysupgrade image matching your device:
+
+          - **Cudy TR3000 512MB:** asset name contains \`cudy_tr3000-512mb-v1\`
+          - **Qihoo 360T7:** asset name contains \`qihoo_360t7\`
+
+          ## ⚡ Hardware Acceleration
+
+          This build includes full hardware acceleration:
+          - MTK HNAT (MediaTek Hardware NAT)
+          - Flow Offloading (nftables)
+          - FullCone NAT
+          - TurboACC
+
+          ---
+
+          Built by **Shawn Rain** using [GitHub Actions](https://github.com/features/actions).
+          Source: [Lean's LEDE](https://github.com/coolsnowwolf/lede)
+          EOF
+
+          echo "status=success" >> $GITHUB_OUTPUT
+
+      - name: 📤 Upload to Release
+        uses: softprops/action-gh-release@v2
+        if: steps.tag.outputs.status == 'success'
+        with:
+          tag_name: ${{ steps.tag.outputs.release_tag }}
+          body_path: release.txt
+          files: ${{ github.workspace }}/firmware_collection/*
+
+      - name: 🚧 Delete old workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          retain_days: 0
+          keep_minimum_runs: 9
+
+      - name: 💾 Save DL cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: /workdir/openwrt/dl
+          key: ${{ runner.os }}-lede-dl-${{ env.REPO_BRANCH }}-${{ github.run_id }}
+
+      - name: 💾 Save ccache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: /workdir/.ccache
+          key: ${{ runner.os }}-lede-ccache-${{ env.REPO_BRANCH }}-${{ hashFiles('config/tr3000-512mb.config', 'config/360t7.config', 'diy-part1.sh', 'diy-part2.sh') }}-${{ github.run_id }}
