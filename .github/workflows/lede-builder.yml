@@ -11,6 +11,9 @@ on:
   schedule:
     # Weekly build: Monday 04:00 Asia/Shanghai (Sunday 20:00 UTC)
     - cron: '0 20 * * 0'
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       device:
