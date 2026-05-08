@@ -13,10 +13,11 @@ sed -i 's/192.168.1.1/192.168.10.1/g' package/base-files/files/bin/config_genera
 # Modify default hostname
 sed -i 's/OpenWrt/ShawnWrt/g' package/base-files/files/bin/config_generate
 
-# Add build date to output file name
-sed -i -e '/^IMG_PREFIX:=/i BUILD_DATE := $(shell date +%Y%m%d)' \
-       -e '/^IMG_PREFIX:=/ s/\($(SUBTARGET)\)/\1-$(BUILD_DATE)/' \
-       -e 's/IMG_PREFIX:=openwrt/IMG_PREFIX:=shawnwrt-lede/g' include/image.mk
+# Add build timestamp to output file names and use ShawnWrt branding.
+sed -i -e '/^BUILD_TIMESTAMP :=/d' \
+       -e '/^IMG_PREFIX:=/i BUILD_TIMESTAMP := $(shell date +%Y%m%d-%H%M)' \
+       -e 's|^IMG_PREFIX:=.*|IMG_PREFIX:=ShawnWrt-$(BOARD)$(if $(SUBTARGET),-$(SUBTARGET))-$(BUILD_TIMESTAMP)|' \
+       include/image.mk
 
 # ── Add the dedicated TR3000 512MB target ──
 # This adds a custom device definition and DTS for the 512MB NAND TR3000,
@@ -39,3 +40,14 @@ src/gz immortalwrt_routing https://downloads.immortalwrt.org/releases/24.10.5/pa
 src/gz immortalwrt_telephony https://downloads.immortalwrt.org/releases/24.10.5/packages/aarch64_cortex-a53/telephony
 EOF
 : > files/etc/opkg/customfeeds.conf
+
+mkdir -p files/etc/uci-defaults
+cat > files/etc/uci-defaults/99-shawnwrt-argon <<'EOF'
+#!/bin/sh
+uci -q batch <<EOT
+set luci.main.mediaurlbase='/luci-static/argon'
+commit luci
+EOT
+exit 0
+EOF
+chmod +x files/etc/uci-defaults/99-shawnwrt-argon
