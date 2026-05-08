@@ -24,3 +24,6 @@ for pkg in \
     cp -r "$GITHUB_WORKSPACE/package/$pkg" package/
   fi
 done
+
+# Add additional LuCI feed (openwrt-25.12 branch)
+echo "src-git luci_25 https://github.com/openwrt/luci.git;openwrt-25.12" >> feeds.conf.default

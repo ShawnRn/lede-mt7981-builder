@@ -11,7 +11,7 @@
 sed -i 's/192.168.1.1/192.168.10.1/g' package/base-files/files/bin/config_generate
 
 # Modify default hostname
-sed -i 's/OpenWrt/LEDE/g' package/base-files/files/bin/config_generate
+sed -i 's/OpenWrt/ShawnWrt/g' package/base-files/files/bin/config_generate
 
 # Add build date to output file name
 sed -i -e '/^IMG_PREFIX:=/i BUILD_DATE := $(shell date +%Y%m%d)' \
