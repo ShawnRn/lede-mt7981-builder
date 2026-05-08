@@ -1,0 +1,29 @@
+#!/bin/sh
+
+# Set WiFi SSID to "Everyday is Holiday." and enable dual-band steering (Smart Connect)
+uci batch <<EOF
+set wireless.default_radio0.ssid='Everyday is Holiday.'
+set wireless.default_radio0.encryption='psk2+ccmp'
+set wireless.default_radio0.key='password'
+
+set wireless.default_radio1.ssid='Everyday is Holiday.'
+set wireless.default_radio1.encryption='psk2+ccmp'
+set wireless.default_radio1.key='password'
+
+# Enable 802.11v/k/r for roaming
+set wireless.default_radio0.ieee80211v='1'
+set wireless.default_radio0.ieee80211k='1'
+set wireless.default_radio0.ieee80211r='1'
+set wireless.default_radio0.ft_over_ds='0'
+set wireless.default_radio0.mbo='1'
+
+set wireless.default_radio1.ieee80211v='1'
+set wireless.default_radio1.ieee80211k='1'
+set wireless.default_radio1.ieee80211r='1'
+set wireless.default_radio1.ft_over_ds='0'
+set wireless.default_radio1.mbo='1'
+
+commit wireless
+EOF
+
+exit 0
