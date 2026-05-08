@@ -15,7 +15,8 @@ sed -i 's/OpenWrt/LEDE/g' package/base-files/files/bin/config_generate
 
 # Add build date to output file name
 sed -i -e '/^IMG_PREFIX:=/i BUILD_DATE := $(shell date +%Y%m%d)' \
-       -e '/^IMG_PREFIX:=/ s/\($(SUBTARGET)\)/\1-$(BUILD_DATE)/' include/image.mk
+       -e '/^IMG_PREFIX:=/ s/\($(SUBTARGET)\)/\1-$(BUILD_DATE)/' \
+       -e 's/IMG_PREFIX:=openwrt/IMG_PREFIX:=shawnwrt-lede/g' include/image.mk
 
 # ── Add the dedicated TR3000 512MB target ──
 # This adds a custom device definition and DTS for the 512MB NAND TR3000,
