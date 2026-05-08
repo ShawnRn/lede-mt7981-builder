@@ -26,3 +26,16 @@ cat "$MOD_ROOT/openwrt-mod/cudy-tr3000-512.mk" >> \
   target/linux/mediatek/image/filogic.mk
 cp "$MOD_ROOT/openwrt-mod/mt7981b-cudy-tr3000-512mb-v1.dts" \
   target/linux/mediatek/dts/
+
+# Keep flashed images on rich, browser-free package indexes. Kernel modules
+# still need to be built into the image because this LEDE build has its own ABI.
+mkdir -p files/etc/opkg
+cat > files/etc/opkg/distfeeds.conf <<'EOF'
+src/gz immortalwrt_core https://downloads.immortalwrt.org/releases/24.10.5/targets/mediatek/filogic/packages
+src/gz immortalwrt_base https://downloads.immortalwrt.org/releases/24.10.5/packages/aarch64_cortex-a53/base
+src/gz immortalwrt_luci https://downloads.immortalwrt.org/releases/24.10.5/packages/aarch64_cortex-a53/luci
+src/gz immortalwrt_packages https://downloads.immortalwrt.org/releases/24.10.5/packages/aarch64_cortex-a53/packages
+src/gz immortalwrt_routing https://downloads.immortalwrt.org/releases/24.10.5/packages/aarch64_cortex-a53/routing
+src/gz immortalwrt_telephony https://downloads.immortalwrt.org/releases/24.10.5/packages/aarch64_cortex-a53/telephony
+EOF
+: > files/etc/opkg/customfeeds.conf
