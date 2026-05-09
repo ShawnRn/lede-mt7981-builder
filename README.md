@@ -55,7 +55,7 @@
 
 ## ⚠️ 注意事项
 
-- 本仓库**不包含**任何 ShawnWrt 自定义插件
+- 本仓库只内置 ShawnWrt Packages 里的 `luci-app-shawnwrt-index` 作为主页，其余 ShawnWrt 插件仍不内置
 - TR3000 512MB 固件仅适用于已改版 U-Boot 的 512MB NAND 设备
 - 默认密码：`password`
 - 默认 IP：`192.168.1.1`

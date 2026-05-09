@@ -8,9 +8,23 @@
 #
 set -euo pipefail
 
-# ── No ShawnWrt packages ──
-# This LEDE build is a clean, performance-focused firmware.
-# No external package repos are cloned here.
+# ── ShawnWrt homepage ──
+# Keep the LEDE build lean, but embed the canonical ShawnWrt Index package
+# from ShawnWrt Packages instead of maintaining a duplicate copy here.
+PKG_REPO="https://github.com/ShawnRn/shawnwrt-packages.git"
+PKG_BRANCH="main"
+PKG_TMP="$(mktemp -d)"
+
+cleanup_pkg() { rm -rf "$PKG_TMP"; }
+trap cleanup_pkg EXIT
+
+git clone -q --depth 1 -b "$PKG_BRANCH" "$PKG_REPO" "$PKG_TMP"
+
+if [ -d "$PKG_TMP/openwrt/luci-app-shawnwrt-index" ]; then
+  mkdir -p package
+  rm -rf package/luci-app-shawnwrt-index
+  cp -r "$PKG_TMP/openwrt/luci-app-shawnwrt-index" package/
+fi
 
 # ── Firmware-local packages ──
 # These are firmware-specific and maintained only in the firmware repo.

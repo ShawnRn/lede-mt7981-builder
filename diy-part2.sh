@@ -46,7 +46,18 @@ cat > files/etc/uci-defaults/99-shawnwrt-argon <<'EOF'
 #!/bin/sh
 uci -q batch <<EOT
 set luci.main.mediaurlbase='/luci-static/argon'
+set luci.themes.Argon='/luci-static/argon'
 commit luci
+set argon.@global[0]=global
+set argon.@global[0].blur='0'
+set argon.@global[0].blur_dark='10'
+set argon.@global[0].transparency='0.3'
+set argon.@global[0].transparency_dark='0.3'
+set argon.@global[0].mode='normal'
+set argon.@global[0].online_wallpaper='none'
+set argon.@global[0].primary='#cec0ab'
+set argon.@global[0].dark_primary='#cec0ab'
+commit argon
 EOT
 exit 0
 EOF
