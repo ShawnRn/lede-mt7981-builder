@@ -90,8 +90,11 @@ for patch in \
   999-2745-mtkhnat-add-mtkhnat-driver-support.patch \
   999-2743-mtkhnat-ipv6-fix-pskb-expand-head-limitatio.patch \
   999-3007-net-ethernet-mtk_ppe-add-roaming-handler.patch; do
-  cp "$MTK_TMP/target/linux/mediatek/patches-6.6/$patch" \
-    "target/linux/mediatek/patches-6.6/$patch"
+  if [ "$patch" = "999-3007-net-ethernet-mtk_ppe-add-roaming-handler.patch" ]; then
+    cp "$GITHUB_WORKSPACE/openwrt-mod/$patch" "target/linux/mediatek/patches-6.6/$patch"
+  else
+    cp "$MTK_TMP/target/linux/mediatek/patches-6.6/$patch" "target/linux/mediatek/patches-6.6/$patch"
+  fi
 done
 
 if ! grep -q 'define KernelPackage/mediatek_hnat' package/kernel/linux/modules/netdevices.mk; then
