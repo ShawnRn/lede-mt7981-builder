@@ -11,6 +11,6 @@ define Device/cudy_tr3000-512mb-v1
   IMAGE_SIZE := 520000k
   KERNEL_IN_UBI := 1
   IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
-  DEVICE_PACKAGES := kmod-usb3 kmod-mt7981-firmware mt7981-wo-firmware
+  DEVICE_PACKAGES := kmod-usb3 automount kmod-mt_wifi kmod-warp kmod-mediatek_hnat
 endef
 TARGET_DEVICES += cudy_tr3000-512mb-v1
