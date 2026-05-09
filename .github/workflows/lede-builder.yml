@@ -261,6 +261,22 @@ jobs:
             mark "$DEV defconfig start"
             STEP_START=$(date +%s)
             make defconfig
+            case "$DEV" in
+              "x64")
+                grep -q '^CONFIG_TARGET_x86_64_DEVICE_generic=y$' .config || {
+                  echo "❌ x64 target validation failed after defconfig"
+                  grep -E '^CONFIG_TARGET_(x86|x86_64|armsr|armvirt)' .config || true
+                  exit 1
+                }
+                ;;
+              "arm64")
+                grep -q '^CONFIG_TARGET_armsr_armv8_DEVICE_generic=y$' .config || {
+                  echo "❌ arm64 target validation failed after defconfig"
+                  grep -E '^CONFIG_TARGET_(x86|x86_64|armsr|armvirt)' .config || true
+                  exit 1
+                }
+                ;;
+            esac
             DEFCONFIG_S=$(elapsed "$STEP_START")
 
             mark "$DEV download start"
@@ -289,6 +305,13 @@ jobs:
 
           echo "📥 Collecting artifacts"
           find bin/targets/ -type f \( -name "*sysupgrade.bin" -o -name "*.img.gz" -o -name "*.vmdk" -o -name "*.qcow2" \) -exec cp {} $GITHUB_WORKSPACE/firmware_collection/ \;
+          if printf ' %s ' "$DEVICES" | grep -q ' arm64 '; then
+            if ! find "$GITHUB_WORKSPACE/firmware_collection" -type f -name "*armsr-armv8*" -print -quit | grep -q .; then
+              echo "❌ arm64 artifact validation failed: no armsr-armv8 image was collected"
+              find "$GITHUB_WORKSPACE/firmware_collection" -maxdepth 1 -type f -printf '%f\n' | sort
+              exit 1
+            fi
+          fi
           cat "$BUILD_TIMING"
 
           echo "status=success" >> $GITHUB_OUTPUT
@@ -324,7 +347,7 @@ jobs:
           - **Cudy TR3000 512MB:** asset name contains \`cudy_tr3000-512mb-v1\`
           - **Qihoo 360T7:** asset name contains \`qihoo_360t7\`
           - **x64:** asset name contains \`x86-64\`
-          - **arm64:** asset name contains \`armvirt-64\`
+          - **arm64:** asset name contains \`armsr-armv8\`
 
           ## ⚡ Hardware Acceleration
 
