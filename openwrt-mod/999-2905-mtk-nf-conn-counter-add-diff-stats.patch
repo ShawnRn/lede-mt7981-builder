@@ -1,0 +1,11 @@
+--- a/include/net/netfilter/nf_conntrack_acct.h
++++ b/include/net/netfilter/nf_conntrack_acct.h
+@@ -14,6 +14,8 @@
+ struct nf_conn_counter {
+ 	atomic64_t packets;
+ 	atomic64_t bytes;
++	atomic64_t diff_packets;
++	atomic64_t diff_bytes;
+ };
+ 
+ struct nf_conn_acct {
