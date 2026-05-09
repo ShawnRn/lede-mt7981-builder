@@ -1,0 +1,10 @@
+--- a/include/net/netfilter/nf_flow_table.h
++++ b/include/net/netfilter/nf_flow_table.h
+@@ -190,6 +190,7 @@ struct flow_offload_hw_path {
+ 	u16 vlan_id;
+ 	u16 pppoe_sid;
+ 	u16 dsa_port;
++	u32 skb_hash;
+ };
+ 
+ #define NF_FLOW_TIMEOUT (30 * HZ)

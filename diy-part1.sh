@@ -89,11 +89,19 @@ cp -r "$MTK_TMP/target/linux/mediatek/files-6.6/include/uapi/linux/wapp" \
 
 mkdir -p target/linux/mediatek/patches-6.6
 for patch in \
+  999-2735-netfilter-nf_flow_table-support-hw-offload-through-v.patch \
+  999-2736-net-8021q-support-hardware-flow-table-offload.patch \
+  999-2737-net-bridge-support-hardware-flow-table-offload.patch \
+  999-2738-net-pppoe-support-hardware-flow-table-offload.patch \
+  999-2739-net-dsa-support-hardware-flow-table-offload.patch \
+  999-2740-net-macvlan-support-hardware-flow-table-offload.patch \
+  999-2741-mtkhnat-add-support-for-virtual-interface-a.patch \
+  999-2742-mtkhnat-tnl-interface-offload-check.patch.patch \
+  999-2904-mtk-flow-hw-path-add-skb-hash.patch \
   999-2745-mtkhnat-add-mtkhnat-driver-support.patch \
   999-2743-mtkhnat-ipv6-fix-pskb-expand-head-limitatio.patch \
-  999-3007-net-ethernet-mtk_ppe-add-roaming-handler.patch \
-  999-3008-fix-hnat-header.patch; do
-  if [[ "$patch" == "999-3007"* ]] || [[ "$patch" == "999-3008"* ]]; then
+  999-3007-net-ethernet-mtk_ppe-add-roaming-handler.patch; do
+  if [[ "$patch" == "999-3007"* ]] || [[ "$patch" == "999-2904"* ]]; then
     cp "$GITHUB_WORKSPACE/openwrt-mod/$patch" "target/linux/mediatek/patches-6.6/$patch"
   else
     cp "$MTK_TMP/target/linux/mediatek/patches-6.6/$patch" "target/linux/mediatek/patches-6.6/$patch"

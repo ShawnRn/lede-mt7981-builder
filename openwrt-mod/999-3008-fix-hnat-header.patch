@@ -1,9 +1,0 @@
---- a/drivers/net/ethernet/mediatek/mtk_hnat/hnat.h
-+++ b/drivers/net/ethernet/mediatek/mtk_hnat/hnat.h
-@@ -965,6 +965,7 @@ extern const struct of_device_id of_hnat_match[];
- extern struct mtk_hnat *hnat_priv;
- 
-+struct flow_offload_hw_path;
- int hnat_dsa_fill_stag(const struct net_device *netdev,
- 		       struct foe_entry *entry,
- 		       struct flow_offload_hw_path *hw_path,
