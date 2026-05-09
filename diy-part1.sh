@@ -74,6 +74,8 @@ mkdir -p \
 rm -rf target/linux/mediatek/files-6.6/drivers/net/ethernet/mediatek/mtk_hnat
 cp -r "$MTK_TMP/target/linux/mediatek/files-6.6/drivers/net/ethernet/mediatek/mtk_hnat" \
   target/linux/mediatek/files-6.6/drivers/net/ethernet/mediatek/
+cp "$MTK_TMP/target/linux/mediatek/files-6.6/drivers/net/ethernet/mediatek/mtk_eth_reset.h" \
+  target/linux/mediatek/files-6.6/drivers/net/ethernet/mediatek/
 rm -rf target/linux/mediatek/files-6.6/drivers/net/wireless/wifi_utility
 cp -r "$MTK_TMP/target/linux/mediatek/files-6.6/drivers/net/wireless/wifi_utility" \
   target/linux/mediatek/files-6.6/drivers/net/wireless/
