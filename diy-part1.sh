@@ -89,8 +89,9 @@ mkdir -p target/linux/mediatek/patches-6.6
 for patch in \
   999-2745-mtkhnat-add-mtkhnat-driver-support.patch \
   999-2743-mtkhnat-ipv6-fix-pskb-expand-head-limitatio.patch \
-  999-3007-net-ethernet-mtk_ppe-add-roaming-handler.patch; do
-  if [ "$patch" = "999-3007-net-ethernet-mtk_ppe-add-roaming-handler.patch" ]; then
+  999-3007-net-ethernet-mtk_ppe-add-roaming-handler.patch \
+  999-3008-fix-hnat-header.patch; do
+  if [[ "$patch" == "999-3007"* ]] || [[ "$patch" == "999-3008"* ]]; then
     cp "$GITHUB_WORKSPACE/openwrt-mod/$patch" "target/linux/mediatek/patches-6.6/$patch"
   else
     cp "$MTK_TMP/target/linux/mediatek/patches-6.6/$patch" "target/linux/mediatek/patches-6.6/$patch"
