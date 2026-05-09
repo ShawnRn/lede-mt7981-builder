@@ -150,4 +150,6 @@ EOF
 fi
 
 # Add additional LuCI feed (openwrt-25.12 branch)
-echo "src-git luci_25 https://github.com/openwrt/luci.git;openwrt-25.12" >> feeds.conf.default
+if ! grep -q '^src-git luci_25 ' feeds.conf.default; then
+  echo "src-git luci_25 https://github.com/openwrt/luci.git;openwrt-25.12" >> feeds.conf.default
+fi
