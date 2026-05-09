@@ -265,16 +265,16 @@ jobs:
             make download -j"$NPROC"
             DOWNLOAD_S=$(elapsed "$STEP_START")
 
-            if [ -f "$GITHUB_WORKSPACE/config/mtwifi-qwrt-performance.config" ]; then
-              mark "$DEV mt_wifi preflight start"
-              make package/mtk/drivers/mt_wifi/compile V=s -j1
-              mark "$DEV mt_wifi preflight done"
-            fi
-            
             # 5. 开始编译
             mark "$DEV compile start"
             STEP_START=$(date +%s)
             if ! make -j"$NPROC" CC="ccache gcc" CXX="ccache g++"; then
+              if [ -f "$GITHUB_WORKSPACE/config/mtwifi-qwrt-performance.config" ]; then
+                mark "$DEV mt_wifi diagnostic retry start"
+                make package/mtk/drivers/mt_wifi/compile V=s -j1
+                mark "$DEV mt_wifi diagnostic retry done"
+              fi
+
               echo "⚠️ Multi-threaded failed, retrying single-threaded..."
               mark "$DEV single-thread retry start"
               make -j1 V=s || exit 1
