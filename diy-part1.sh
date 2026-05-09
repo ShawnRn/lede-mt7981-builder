@@ -62,6 +62,12 @@ for pkg in datconf mtwifi-cfg luci-app-mtwifi-cfg luci-app-turboacc-mtk; do
   cp -r "$MTK_TMP/package/mtk/applications/$pkg" "package/mtk/applications/$pkg"
 done
 
+# datconf is packaged as a Makefile plus a pre-generated source archive in the
+# vendor tree's dl/ directory. Keep the archive local so LEDE does not try to
+# fetch a source package that has no upstream URL in the package Makefile.
+mkdir -p dl
+cp "$MTK_TMP/dl/datconf-6bb733f7.tar.bz2" dl/
+
 rm -rf package/lean/mt
 
 mkdir -p \
