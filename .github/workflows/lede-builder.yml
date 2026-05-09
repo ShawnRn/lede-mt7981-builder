@@ -250,6 +250,9 @@ jobs:
             
             # 3. 加载配置
             cp -f $GITHUB_WORKSPACE/$CONFIG .config
+            if [ -f "$GITHUB_WORKSPACE/config/mtwifi-qwrt-performance.config" ]; then
+              cat "$GITHUB_WORKSPACE/config/mtwifi-qwrt-performance.config" >> .config
+            fi
             
             # 4. 刷新配置并下载
             mark "$DEV defconfig start"
