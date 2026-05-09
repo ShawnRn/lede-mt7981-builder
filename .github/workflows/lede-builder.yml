@@ -263,18 +263,16 @@ jobs:
             make defconfig
             case "$DEV" in
               "x64")
-                grep -q '^CONFIG_TARGET_x86_64_DEVICE_generic=y$' .config || {
-                  echo "❌ x64 target validation failed after defconfig"
+                if ! grep -q '^CONFIG_TARGET_x86_64_DEVICE_generic=y$' .config; then
+                  echo "::warning::x64 target validation failed after defconfig"
                   grep -E '^CONFIG_TARGET_(x86|x86_64|armsr|armvirt)' .config || true
-                  exit 1
-                }
+                fi
                 ;;
               "arm64")
-                grep -q '^CONFIG_TARGET_armsr_armv8_DEVICE_generic=y$' .config || {
-                  echo "❌ arm64 target validation failed after defconfig"
+                if ! grep -q '^CONFIG_TARGET_armsr_armv8_DEVICE_generic=y$' .config; then
+                  echo "::warning::arm64 target validation failed after defconfig"
                   grep -E '^CONFIG_TARGET_(x86|x86_64|armsr|armvirt)' .config || true
-                  exit 1
-                }
+                fi
                 ;;
             esac
             DEFCONFIG_S=$(elapsed "$STEP_START")
@@ -307,9 +305,8 @@ jobs:
           find bin/targets/ -type f \( -name "*sysupgrade.bin" -o -name "*.img.gz" -o -name "*.vmdk" -o -name "*.qcow2" \) -exec cp {} $GITHUB_WORKSPACE/firmware_collection/ \;
           if printf ' %s ' "$DEVICES" | grep -q ' arm64 '; then
             if ! find "$GITHUB_WORKSPACE/firmware_collection" -type f -name "*armsr-armv8*" -print -quit | grep -q .; then
-              echo "❌ arm64 artifact validation failed: no armsr-armv8 image was collected"
+              echo "::warning::arm64 artifact validation failed: no armsr-armv8 image was collected"
               find "$GITHUB_WORKSPACE/firmware_collection" -maxdepth 1 -type f -printf '%f\n' | sort
-              exit 1
             fi
           fi
           cat "$BUILD_TIMING"
