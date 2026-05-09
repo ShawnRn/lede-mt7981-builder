@@ -100,11 +100,12 @@ for patch in \
   999-2904-mtk-flow-hw-path-add-skb-hash.patch \
   999-2905-mtk-nf-conn-counter-add-diff-stats.patch \
   999-2906-mtk-hnat-drop-unsupported-rxd-accessors.patch \
+  999-2907-mtk-hnat-export-ppd-bridge-symbols.patch \
   999-2745-mtkhnat-add-mtkhnat-driver-support.patch \
   999-2743-mtkhnat-ipv6-fix-pskb-expand-head-limitatio.patch \
   999-3002-net-ethernet-mtk_ppe-keep-sp-in-the-info1.patch \
   999-3007-net-ethernet-mtk_ppe-add-roaming-handler.patch; do
-  if [[ "$patch" == "999-3007"* ]] || [[ "$patch" == "999-2904"* ]] || [[ "$patch" == "999-2905"* ]] || [[ "$patch" == "999-2906"* ]]; then
+  if [[ "$patch" == "999-29"* ]] || [[ "$patch" == "999-3007"* ]]; then
     cp "$GITHUB_WORKSPACE/openwrt-mod/$patch" "target/linux/mediatek/patches-6.6/$patch"
   else
     cp "$MTK_TMP/target/linux/mediatek/patches-6.6/$patch" "target/linux/mediatek/patches-6.6/$patch"

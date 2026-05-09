@@ -1,0 +1,32 @@
+From 2f80a8c5c1f7d56e63a1d6f3c5fd2fbb63d0b1d1 Mon Sep 17 00:00:00 2001
+From: Shawn Rain <shawnrain@users.noreply.github.com>
+Date: Sat, 9 May 2026 17:48:00 +0800
+Subject: [PATCH] net: ethernet: mtk: export HNAT bridge helper symbols
+
+The MTK HNAT module imported from the SDK tree references eth1_in_br and
+ppd_dev.  The vendor tree exports these from mtk_eth_soc.c, while the Lean
+base does not.  Add the two compatibility symbols without pulling in the
+larger vendor RX path changes.
+---
+ drivers/net/ethernet/mediatek/mtk_eth_soc.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/drivers/net/ethernet/mediatek/mtk_eth_soc.c b/drivers/net/ethernet/mediatek/mtk_eth_soc.c
+index 0a8de77..1c4c6ad 100644
+--- a/drivers/net/ethernet/mediatek/mtk_eth_soc.c
++++ b/drivers/net/ethernet/mediatek/mtk_eth_soc.c
+@@ -41,6 +41,11 @@
+ #include "mtk_hnat/nf_hnat_mtk.h"
+ #endif
+ 
++atomic_t eth1_in_br = ATOMIC_INIT(0);
++EXPORT_SYMBOL(eth1_in_br);
++struct net_device *ppd_dev;
++EXPORT_SYMBOL(ppd_dev);
++
+ static int mtk_msg_level = -1;
+ module_param_named(msg_level, mtk_msg_level, int, 0);
+ MODULE_PARM_DESC(msg_level, "Message level (-1=defaults,0=none,...,16=all)");
+-- 
+2.51.0
+
