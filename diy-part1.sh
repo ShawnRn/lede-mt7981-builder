@@ -57,6 +57,21 @@ for pkg in conninfra mt_wifi warp wifi-profile; do
   cp -r "$MTK_TMP/package/mtk/drivers/$pkg" "package/mtk/drivers/$pkg"
 done
 
+# The vendor mt_wifi Makefiles force pre-cal/RLM flags even when the MT7981
+# config disables them. Those flags reference calibration macros that are not
+# present in this source tree, so keep them controlled by Kconfig.
+for mf in \
+  package/mtk/drivers/mt_wifi/src/mt_wifi_ap/Makefile \
+  package/mtk/drivers/mt_wifi/src/mt_wifi/os/linux/Makefile.mt_wifi_ap \
+  package/mtk/drivers/mt_wifi/src/mt_wifi/os/linux/Makefile.mt_wifi_ap_alps; do
+  [ -f "$mf" ] || continue
+  sed -i \
+    -e '/^EXTRA_CFLAGS += -DPRE_CAL_TRX_SET1_SUPPORT$/d' \
+    -e '/^EXTRA_CFLAGS += -DRLM_CAL_CACHE_SUPPORT$/d' \
+    -e '/^EXTRA_CFLAGS += -DPRE_CAL_TRX_SET2_SUPPORT$/d' \
+    "$mf"
+done
+
 for pkg in datconf mtwifi-cfg luci-app-mtwifi-cfg luci-app-turboacc-mtk; do
   rm -rf "package/mtk/applications/$pkg"
   cp -r "$MTK_TMP/package/mtk/applications/$pkg" "package/mtk/applications/$pkg"
