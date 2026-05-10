@@ -40,21 +40,27 @@ for pkg in \
 done
 
 # ── MTK private Wi-Fi driver experiment ──
-# Keep Lean's LEDE as the base tree, but graft the MT7981 mt_wifi/WARP/HNAT
-# stack from the MTK SDK-based tree for the mtwifi-qwrt-performance branch.
-MTK_REPO="${MTK_REPO:-https://github.com/padavanonly/immortalwrt-mt798x-6.6.git}"
-MTK_BRANCH="${MTK_BRANCH:-openwrt-24.10-6.6}"
-MTK_TMP="$(mktemp -d)"
+# Keep Lean's LEDE as the base tree. For QWRT-like performance testing, graft
+# the newer MTK SDK mt_wifi/WARP/conninfra package set from hanwckf's mt798x
+# tree, while retaining the Linux 6.6 HNAT/wifi_utility patches from the
+# padavanonly 24.10 tree.
+MTK_WIFI_REPO="${MTK_WIFI_REPO:-https://github.com/hanwckf/immortalwrt-mt798x.git}"
+MTK_WIFI_BRANCH="${MTK_WIFI_BRANCH:-openwrt-21.02}"
+MTK_HNAT_REPO="${MTK_HNAT_REPO:-https://github.com/padavanonly/immortalwrt-mt798x-6.6.git}"
+MTK_HNAT_BRANCH="${MTK_HNAT_BRANCH:-openwrt-24.10-6.6}"
+MTK_WIFI_TMP="$(mktemp -d)"
+MTK_HNAT_TMP="$(mktemp -d)"
 
-cleanup_mtk() { rm -rf "$MTK_TMP"; }
+cleanup_mtk() { rm -rf "$MTK_WIFI_TMP" "$MTK_HNAT_TMP"; }
 trap 'cleanup_pkg; cleanup_mtk' EXIT
 
-git clone -q --depth 1 --filter=blob:none -b "$MTK_BRANCH" "$MTK_REPO" "$MTK_TMP"
+git clone -q --depth 1 --filter=blob:none -b "$MTK_WIFI_BRANCH" "$MTK_WIFI_REPO" "$MTK_WIFI_TMP"
+git clone -q --depth 1 --filter=blob:none -b "$MTK_HNAT_BRANCH" "$MTK_HNAT_REPO" "$MTK_HNAT_TMP"
 
 mkdir -p package/mtk/drivers package/mtk/applications
 for pkg in conninfra mt_wifi warp wifi-profile; do
   rm -rf "package/mtk/drivers/$pkg"
-  cp -r "$MTK_TMP/package/mtk/drivers/$pkg" "package/mtk/drivers/$pkg"
+  cp -r "$MTK_WIFI_TMP/package/mtk/drivers/$pkg" "package/mtk/drivers/$pkg"
 done
 
 # Keep the experimental MTK kernel modules installable, but do not let the
@@ -92,14 +98,19 @@ grep -RIl 'netif_rx_ni' package/mtk/drivers/mt_wifi/src/mt_wifi | \
 
 for pkg in datconf mtwifi-cfg luci-app-mtwifi-cfg luci-app-turboacc-mtk; do
   rm -rf "package/mtk/applications/$pkg"
-  cp -r "$MTK_TMP/package/mtk/applications/$pkg" "package/mtk/applications/$pkg"
+  cp -r "$MTK_WIFI_TMP/package/mtk/applications/$pkg" "package/mtk/applications/$pkg"
 done
 
-# datconf is packaged as a Makefile plus a pre-generated source archive in the
-# vendor tree's dl/ directory. Keep the archive local so LEDE does not try to
-# fetch a source package that has no upstream URL in the package Makefile.
+# The MTK package Makefiles reference local-only source archives without
+# upstream URLs. Copy the matching vendor archives into dl/ so Actions builds
+# remain deterministic.
 mkdir -p dl
-cp "$MTK_TMP/dl/datconf-6bb733f7.tar.bz2" dl/
+find "$MTK_WIFI_TMP/dl" -maxdepth 1 -type f \( \
+  -name 'datconf-*.tar.*' -o \
+  -name 'mt79xx_*.tar.*' -o \
+  -name 'mt79xx_conninfra_*.tar.*' -o \
+  -name 'warp_*.tar.*' \
+\) -exec cp {} dl/ \;
 
 rm -rf package/lean/mt
 
@@ -111,19 +122,19 @@ mkdir -p \
   target/linux/mediatek/files-6.6/include/uapi/linux
 
 rm -rf target/linux/mediatek/files-6.6/drivers/net/ethernet/mediatek/mtk_hnat
-cp -r "$MTK_TMP/target/linux/mediatek/files-6.6/drivers/net/ethernet/mediatek/mtk_hnat" \
+cp -r "$MTK_HNAT_TMP/target/linux/mediatek/files-6.6/drivers/net/ethernet/mediatek/mtk_hnat" \
   target/linux/mediatek/files-6.6/drivers/net/ethernet/mediatek/
-cp "$MTK_TMP/target/linux/mediatek/files-6.6/drivers/net/ethernet/mediatek/mtk_eth_reset.h" \
+cp "$MTK_HNAT_TMP/target/linux/mediatek/files-6.6/drivers/net/ethernet/mediatek/mtk_eth_reset.h" \
   target/linux/mediatek/files-6.6/drivers/net/ethernet/mediatek/
 rm -rf target/linux/mediatek/files-6.6/drivers/net/wireless/wifi_utility
-cp -r "$MTK_TMP/target/linux/mediatek/files-6.6/drivers/net/wireless/wifi_utility" \
+cp -r "$MTK_HNAT_TMP/target/linux/mediatek/files-6.6/drivers/net/wireless/wifi_utility" \
   target/linux/mediatek/files-6.6/drivers/net/wireless/
-cp "$MTK_TMP/target/linux/mediatek/files-6.6/include/net/ra_nat.h" \
+cp "$MTK_HNAT_TMP/target/linux/mediatek/files-6.6/include/net/ra_nat.h" \
   target/linux/mediatek/files-6.6/include/net/
-cp "$MTK_TMP/target/linux/mediatek/files-6.6/include/linux/wireless.h" \
+cp "$MTK_HNAT_TMP/target/linux/mediatek/files-6.6/include/linux/wireless.h" \
   target/linux/mediatek/files-6.6/include/linux/
 rm -rf target/linux/mediatek/files-6.6/include/uapi/linux/wapp
-cp -r "$MTK_TMP/target/linux/mediatek/files-6.6/include/uapi/linux/wapp" \
+cp -r "$MTK_HNAT_TMP/target/linux/mediatek/files-6.6/include/uapi/linux/wapp" \
   target/linux/mediatek/files-6.6/include/uapi/linux/
 
 mkdir -p target/linux/mediatek/patches-6.6
@@ -148,7 +159,7 @@ for patch in \
   if [[ "$patch" == "999-29"* ]] || [[ "$patch" == "999-3007"* ]]; then
     cp "$GITHUB_WORKSPACE/openwrt-mod/$patch" "target/linux/mediatek/patches-6.6/$patch"
   else
-    cp "$MTK_TMP/target/linux/mediatek/patches-6.6/$patch" "target/linux/mediatek/patches-6.6/$patch"
+    cp "$MTK_HNAT_TMP/target/linux/mediatek/patches-6.6/$patch" "target/linux/mediatek/patches-6.6/$patch"
   fi
 done
 

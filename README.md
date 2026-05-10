@@ -15,7 +15,7 @@
 ## 分支说明
 
 - `main`：常规 ShawnWrt LEDE 编译分支，用于正式固件。
-- `mtwifi-qwrt-performance`：MTK 闭源驱动实验分支。从 MTK SDK 系源码迁入 `conninfra`、`mt_wifi`、`warp`、`mtk_hnat`、`mtwifi-cfg`、`datconf`、`luci-app-turboacc-mtk`，再补上 Linux 6.6 和 LEDE 需要的兼容修复。当前 TR3000 验证镜像保留这些模块但关闭开机自动加载，避免早期 bootloop 无法留日志。
+- `mtwifi-qwrt-performance`：MTK 闭源驱动实验分支。从 MTK SDK 系源码迁入 `conninfra`、`mt_wifi` 7.6.7.3、WARP、`mtk_hnat`、`mtwifi-cfg`、`datconf`、`luci-app-turboacc-mtk`，再补上 Linux 6.6 和 LEDE 需要的兼容修复。无线驱动包来自 `hanwckf/immortalwrt-mt798x`，6.6 HNAT/wifi_utility 兼容层来自 `padavanonly/immortalwrt-mt798x-6.6`。当前 TR3000 验证镜像保留这些模块但关闭开机自动加载，避免早期 bootloop 无法留日志。
 
 操作一个分支时不要影响其他分支。读日志、取消运行、推送修复、启动 workflow 时，都必须限定到目标分支或明确的 run id。
 
@@ -30,7 +30,7 @@
 - MT7981 路由器配置内置 OpenClash LuCI 插件，但不内置 Clash/mihomo core。
 - TR3000 配置加入 USB 网卡/Modem 支持，包括 RNDIS、CDC Ethernet、iPhone USB 共享网络、CDC NCM、CDC MBIM、Huawei CDC NCM、Realtek RTL815x、ASIX AX88179、Aquantia AQC111、QModem、USB 打印、USB 工具等。
 - TR3000 额外包含 USB3、USB 存储、block mount 和常见文件系统支持。
-- 按目标选择硬件加速能力：flow offload、FullCone NAT、BBR；在 MTK 实验分支上还包含 MTK HNAT/WARP/mt_wifi。TR3000 实验镜像默认禁用 `turboacc`、QModem 后台服务和 MTK 模块 autoload，刷入后先从有线 LAN 进入 SSH，再运行 `/root/mtk-driver-test.sh` 分段加载确认稳定性。
+- 按目标选择硬件加速能力：flow offload、FullCone NAT、BBR；在 MTK 实验分支上还包含 MTK HNAT/WARP/mt_wifi 7.6.7.3。TR3000 实验镜像默认禁用 `turboacc`、QModem 后台服务和 MTK 模块 autoload，刷入后先从有线 LAN 进入 SSH，再运行 `/root/mtk-driver-test.sh` 分段加载确认稳定性。
 
 ## GitHub Actions 编译
 
@@ -97,13 +97,14 @@ gh run list \
 - TR3000 512MB 镜像只适用于已经切到自定义 512MB NAND/U-Boot 布局的设备。
 - 刷机或改 U-Boot 前保留设备自己的 `Factory` 和 `bdinfo` 备份。
 - 依赖本次 LEDE kernel ABI 的内核模块应内置进固件；普通用户态包通常可以走 opkg feeds。
-- MTK 闭源驱动分支是实验分支。成功的 TR3000 构建应包含 `kmod-mt_wifi`、`kmod-conninfra`、`kmod-warp`、`kmod-mediatek_hnat`、`luci-app-mtwifi-cfg`、`luci-app-turboacc-mtk`、`datconf`、`mtwifi-cfg`，但启动阶段不应生成 `/etc/modules.d/10-conninfra`、`20-mediatek_hnat`、`60-warp` 或 `mt_wifi` 自动加载项。
+- MTK 闭源驱动分支是实验分支。成功的 TR3000 构建应包含 `kmod-mt_wifi` 7.6.7.3、`mt_wifi.ko`、`kmod-conninfra`、`kmod-warp`、`kmod-mediatek_hnat`、`luci-app-mtwifi-cfg`、`luci-app-turboacc-mtk`、`datconf`、`mtwifi-cfg`，但启动阶段不应生成 `/etc/modules.d/10-conninfra`、`20-mediatek_hnat`、`60-warp` 或 `mt_wifi` 自动加载项。若后续切到 QWRT 完全同名包，检查项应允许 `kmod-mt7981` 和 `mt798x.ko`。
 
 ## 致谢
 
 - [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede)
 - [P3TERX/Actions-OpenWrt](https://github.com/P3TERX/Actions-OpenWrt)
-- MTK 实验来源：`padavanonly/immortalwrt-mt798x-6.6`
+- MTK 无线实验来源：`hanwckf/immortalwrt-mt798x`
+- MTK 6.6 HNAT/wifi_utility 兼容来源：`padavanonly/immortalwrt-mt798x-6.6`
 - QModem feed：`FUjr/QModem`
 
 Maintained by Shawn Rain.

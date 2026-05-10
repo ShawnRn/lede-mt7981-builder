@@ -13,7 +13,7 @@ sed -i 's/192.168.1.1/192.168.10.1/g' package/base-files/files/bin/config_genera
 # Modify default hostname
 sed -i 's/OpenWrt/ShawnWrt/g' package/base-files/files/bin/config_generate
 
-# The MTK private mt_wifi/WARP stack we graft in from the SDK tree is built
+# The MTK private mt_wifi/WARP stack we graft in from the SDK trees is built
 # against the 6.6 mediatek target. Keep the LEDE base, but use its 6.6 target.
 sed -i 's/^KERNEL_PATCHVER:=.*/KERNEL_PATCHVER:=6.6/' target/linux/mediatek/Makefile
 
@@ -61,6 +61,21 @@ if [ -f .config ]; then
     config_unset "$sym"
   done
 
+  for sym in \
+    CONFIG_MTK_MT_WIFI_DRIVER_VERSION_7661 \
+    CONFIG_MTK_MT_WIFI_MT7981_DEFAULT_FIRMWARE \
+    CONFIG_MTK_MT_WIFI_MT7981_20230306 \
+    CONFIG_MTK_MT_WIFI_MT7981_20230330 \
+    CONFIG_MTK_MT_WIFI_MT7981_20230411 \
+    CONFIG_MTK_MT_WIFI_MT7981_20230717 \
+    CONFIG_MTK_MT_WIFI_MT7981_20231024 \
+    CONFIG_MTK_FW_NEW_API_PATCH \
+    CONFIG_MTK_PRE_CAL_TRX_SET1_SUPPORT \
+    CONFIG_MTK_RLM_CAL_CACHE_SUPPORT \
+    CONFIG_MTK_PRE_CAL_TRX_SET2_SUPPORT; do
+    config_unset "$sym"
+  done
+
   config_set CONFIG_KERNEL_WIRELESS_EXT y
   config_set CONFIG_PACKAGE_wireless-tools y
   config_set CONFIG_PACKAGE_kmod-mediatek_hnat y
@@ -87,6 +102,9 @@ if [ -f .config ]; then
   config_set CONFIG_MTK_RT_FIRST_IF_RF_OFFSET 0xc0000
   config_set CONFIG_MTK_MT_WIFI m
   config_set CONFIG_MTK_MT_WIFI_PATH '"mt_wifi"'
+  config_set CONFIG_MTK_MT_WIFI_DRIVER_VERSION_7673 y
+  config_set CONFIG_MTK_MT_WIFI_MT7981_20240823 y
+  config_set CONFIG_MTK_MT_WIFI_FIRMWARE_PATH_MT7981 '"mt7981-fw-20240823"'
   config_set CONFIG_MTK_FIRST_IF_EEPROM_FLASH y
   config_set CONFIG_MTK_RT_FIRST_CARD_EEPROM '"flash"'
   config_set CONFIG_MTK_WIFI_BASIC_FUNC y
@@ -133,7 +151,6 @@ if [ -f .config ]; then
   config_set CONFIG_MTK_UAPSD y
   config_set CONFIG_MTK_RED_SUPPORT y
   config_set CONFIG_MTK_FIRST_IF_IPAILNA y
-  config_set CONFIG_MTK_MT7981_NEW_FW y
   config_set CONFIG_MTK_WIFI_FW_BIN_LOAD y
   config_set CONFIG_MTK_WIFI_MODE_AP m
   config_set CONFIG_MTK_MT_AP_SUPPORT m
@@ -241,13 +258,21 @@ load_one() {
 	echo "== modprobe $mod =="
 	modprobe "$mod"
 	sleep 3
-	lsmod | grep -E "^${mod}[[:space:]]|^mt_wifi[[:space:]]|^mtk_warp[[:space:]]|^mtkhnat[[:space:]]|^conninfra[[:space:]]" || true
+	lsmod | grep -E "^${mod}[[:space:]]|^mt_wifi[[:space:]]|^mt798x[[:space:]]|^mtk_warp[[:space:]]|^mtkhnat[[:space:]]|^conninfra[[:space:]]" || true
 	logread | tail -n 80 || true
 	echo
 }
 
+load_wifi() {
+	if modinfo mt798x >/dev/null 2>&1; then
+		load_one mt798x
+	else
+		load_one mt_wifi
+	fi
+}
+
 load_one conninfra
-load_one mt_wifi
+load_wifi
 load_one mtk_warp_proxy
 load_one mtk_warp
 load_one mtkhnat
