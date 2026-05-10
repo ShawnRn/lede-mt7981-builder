@@ -72,6 +72,11 @@ for mf in \
     "$mf"
 done
 
+# Linux 6.x removed netif_rx_ni(); the driver only needs to pass the skb into
+# the receive path here, so use netif_rx() consistently.
+grep -RIl 'netif_rx_ni' package/mtk/drivers/mt_wifi/src/mt_wifi | \
+  xargs -r sed -i 's/netif_rx_ni(/netif_rx(/g'
+
 for pkg in datconf mtwifi-cfg luci-app-mtwifi-cfg luci-app-turboacc-mtk; do
   rm -rf "package/mtk/applications/$pkg"
   cp -r "$MTK_TMP/package/mtk/applications/$pkg" "package/mtk/applications/$pkg"
