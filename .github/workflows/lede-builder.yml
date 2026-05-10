@@ -181,9 +181,9 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: /workdir/.ccache
-          key: ${{ runner.os }}-lede-ccache-${{ env.REPO_BRANCH }}-${{ hashFiles('config/tr3000-512mb.config', 'config/360t7.config', 'diy-part1.sh', 'diy-part2.sh') }}-${{ github.run_id }}
+          key: ${{ runner.os }}-lede-ccache-${{ env.REPO_BRANCH }}-${{ hashFiles('config/*.config', 'diy-part1.sh', 'diy-part2.sh') }}-${{ github.run_id }}
           restore-keys: |
-            ${{ runner.os }}-lede-ccache-${{ env.REPO_BRANCH }}-${{ hashFiles('config/tr3000-512mb.config', 'config/360t7.config', 'diy-part1.sh', 'diy-part2.sh') }}-
+            ${{ runner.os }}-lede-ccache-${{ env.REPO_BRANCH }}-${{ hashFiles('config/*.config', 'diy-part1.sh', 'diy-part2.sh') }}-
             ${{ runner.os }}-lede-ccache-${{ env.REPO_BRANCH }}-
 
       - name: 🔧 Configure ccache
@@ -256,9 +256,14 @@ jobs:
             
             # 3. 加载配置
             cp -f $GITHUB_WORKSPACE/$CONFIG .config
-            if [ -f "$GITHUB_WORKSPACE/config/mtwifi-qwrt-performance.config" ]; then
-              cat "$GITHUB_WORKSPACE/config/mtwifi-qwrt-performance.config" >> .config
-            fi
+            case "$DEV" in
+              "TR3000-512MB"|"360T7")
+                if [ -f "$GITHUB_WORKSPACE/config/mtwifi-qwrt-performance.config" ]; then
+                  mark "$DEV applying MTK mt_wifi performance overlay"
+                  cat "$GITHUB_WORKSPACE/config/mtwifi-qwrt-performance.config" >> .config
+                fi
+                ;;
+            esac
             
             # 4. 刷新配置并下载
             mark "$DEV defconfig start"
@@ -401,4 +406,4 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: /workdir/.ccache
-          key: ${{ runner.os }}-lede-ccache-${{ env.REPO_BRANCH }}-${{ hashFiles('config/tr3000-512mb.config', 'config/360t7.config', 'diy-part1.sh', 'diy-part2.sh') }}-${{ github.run_id }}
+          key: ${{ runner.os }}-lede-ccache-${{ env.REPO_BRANCH }}-${{ hashFiles('config/*.config', 'diy-part1.sh', 'diy-part2.sh') }}-${{ github.run_id }}
