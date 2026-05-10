@@ -170,6 +170,16 @@ CONFIG_MEDIATEK_NETSYS_V2=y
 EOF
 fi
 
+if ! grep -q '^CONFIG_WIRELESS_EXT=y' target/linux/mediatek/filogic/config-6.6; then
+  cat >> target/linux/mediatek/filogic/config-6.6 <<'EOF'
+CONFIG_WIRELESS_EXT=y
+CONFIG_WEXT_CORE=y
+CONFIG_WEXT_PROC=y
+CONFIG_WEXT_PRIV=y
+CONFIG_WEXT_SPY=y
+EOF
+fi
+
 # Add additional LuCI feed (openwrt-25.12 branch)
 if ! grep -q '^src-git luci_25 ' feeds.conf.default; then
   echo "src-git luci_25 https://github.com/openwrt/luci.git;openwrt-25.12" >> feeds.conf.default
