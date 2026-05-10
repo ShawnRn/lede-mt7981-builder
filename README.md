@@ -1,70 +1,112 @@
 # LEDE Firmware Builder
 
-基于 [Lean's LEDE](https://github.com/coolsnowwolf/lede) 源码，为以下两台设备自动编译固件：
+基于 [Lean's LEDE](https://github.com/coolsnowwolf/lede) 源码，通过 GitHub Actions 自动编译 ShawnWrt 固件。
 
-| 设备 | SoC | 闪存 | 目标 |
-|------|-----|------|------|
-| Cudy TR3000 | MT7981B | 512MB NAND (改版 U-Boot) | `cudy_tr3000-512mb-v1` |
-| Qihoo 360T7 | MT7981B | 128MB NAND | `qihoo_360t7` |
+当前仓库已经不只是两台 MT7981 路由器的编译器，也包含通用 x64 和 ARM64 镜像。`main` 分支保持常规 LEDE 驱动路线；`mtwifi-qwrt-performance` 分支用于实验：整体仍使用 LEDE，但把 MTK SDK 系的 `mt_wifi` / WARP / HNAT 栈迁移进来，用于 TR3000 和 360T7 的高性能无线/硬件加速验证。
 
-## ⚡ 硬件加速
+## 支持目标
 
-本固件已启用全部硬件加速特性，确保最优性能：
+| Workflow device | 平台 | 输出目标 | 说明 |
+| --- | --- | --- | --- |
+| `TR3000-512MB` | MediaTek MT7981B | `cudy_tr3000-512mb-v1` | 适用于已改 512MB NAND/U-Boot 布局的 Cudy TR3000。 |
+| `360T7` | MediaTek MT7981B | `qihoo_360t7` | 128MB NAND 的 360T7。 |
+| `x64` | x86_64 generic | `x86/64` | 通用 x64 虚拟机或裸机镜像。 |
+| `arm64` | ARMv8 generic | `armsr/armv8` | 通用 ARM64 虚拟机/SBC 镜像。 |
+| `all` | 混合 | 全部目标 | 展开为 `TR3000-512MB 360T7 x64 arm64`。 |
 
-- **MTK HNAT** — MediaTek 硬件 NAT 加速
-- **Flow Offloading** — nftables 流量卸载
-- **FullCone NAT** — 全锥形 NAT
-- **TurboACC** — Lean 的综合网络加速
-- **TCP BBR** — Google BBR 拥塞控制算法
+## 分支说明
 
-## 📅 自动编译
+- `main`：常规 ShawnWrt LEDE 编译分支，用于正式固件。
+- `mtwifi-qwrt-performance`：MTK 闭源驱动实验分支。从 MTK SDK 系源码迁入 `conninfra`、`mt_wifi`、`warp`、`mtk_hnat`、`mtwifi-cfg`、`datconf`、`luci-app-turboacc-mtk`，再补上 Linux 6.6 和 LEDE 需要的兼容修复。
 
-- **每周定时编译**：北京时间每周一 04:00 自动拉取最新 LEDE 源码编译
-- **手动触发**：支持在 Actions 页面手动选择设备编译
-- **SSH Menuconfig**：可通过 tmate 远程调整 `.config`
+操作一个分支时不要影响其他分支。读日志、取消运行、推送修复、启动 workflow 时，都必须限定到目标分支或明确的 run id。
 
-## 🚀 使用方法
+## 内置能力
 
-### 下载固件
+- ShawnWrt 首页：`diy-part1.sh` 从 `ShawnRn/shawnwrt-packages` 拉取 `luci-app-shawnwrt-index`，本仓库不维护重复包副本。
+- ShawnWrt 品牌：镜像文件名前缀为 `ShawnWrt-...`，并带构建时间戳。
+- 默认 LAN IP：`192.168.10.1`。
+- 默认主机名：`ShawnWrt`。
+- Argon 主题默认值通过 `/etc/uci-defaults/99-shawnwrt-argon` 写入。
+- 镜像内写入 ImmortalWrt 24.10.5 opkg feeds，刷机后可以直接使用更丰富的软件源。
+- MT7981 路由器配置内置 OpenClash LuCI 插件，但不内置 Clash/mihomo core。
+- TR3000、x64、arm64 配置加入 USB 网卡/Modem 支持，包括 RNDIS、CDC Ethernet、iPhone USB 共享网络、CDC NCM、CDC MBIM、Huawei CDC NCM、QModem、USB 打印、USB 工具等。
+- TR3000 额外包含 USB3、USB 存储、block mount 和常见文件系统支持。
+- 按目标选择硬件加速能力：flow offload、FullCone NAT、BBR；在 MTK 实验分支上还包含 MTK HNAT/WARP/mt_wifi。
 
-前往 [Releases](../../releases) 页面下载最新编译的 sysupgrade 固件。
+## GitHub Actions 编译
 
-### 手动触发编译
+使用 `LEDE Firmware Builder` workflow。本仓库默认不在本地编译 LEDE/OpenWrt 固件。
 
-1. 进入 **Actions** 页面
-2. 选择 **LEDE Firmware Builder** 工作流
-3. 点击 **Run workflow**
-4. 选择设备型号（或 `all` 编译全部）
+手动触发参数：
 
-## 📁 仓库结构
+- `device`：`TR3000-512MB`、`360T7`、`x64`、`arm64` 或 `all`。
+- `ssh`：打开临时 tmate menuconfig 会话；`device=all` 时无效。
+- `release`：`true` 时发布到 GitHub Releases；`false` 时仅保留为 workflow artifact。
 
+常用命令：
+
+```bash
+gh workflow run "LEDE Firmware Builder" \
+  --repo ShawnRn/lede-mt7981-builder \
+  --ref main \
+  -f device=all \
+  -f release=true
 ```
+
+```bash
+gh workflow run "LEDE Firmware Builder" \
+  --repo ShawnRn/lede-mt7981-builder \
+  --ref mtwifi-qwrt-performance \
+  -f device=all \
+  -f release=false
+```
+
+只检查目标分支：
+
+```bash
+gh run list \
+  --repo ShawnRn/lede-mt7981-builder \
+  --branch mtwifi-qwrt-performance \
+  --workflow "LEDE Firmware Builder"
+```
+
+## 仓库结构
+
+```text
 .
 ├── .github/workflows/
-│   └── lede-builder.yml      # GitHub Actions 工作流
+│   └── lede-builder.yml               # GitHub Actions 固件编译 workflow
 ├── config/
-│   ├── tr3000-512mb.config    # TR3000 512MB 设备配置 (seed)
-│   └── 360t7.config           # 360T7 设备配置 (seed)
+│   ├── 360t7.config                   # 360T7 seed config
+│   ├── arm64.config                   # 通用 ARM64 seed config
+│   ├── mtwifi-qwrt-performance.config # MTK 闭源驱动附加配置
+│   ├── tr3000-512mb.config            # TR3000 512MB seed config
+│   └── x64.config                     # 通用 x64 seed config
 ├── openwrt-mod/
-│   ├── cudy-tr3000-512.mk     # TR3000 512MB 自定义 target
-│   └── mt7981b-cudy-tr3000-512mb-v1.dts  # 512MB NAND DTS
-├── diy-part1.sh               # feeds 更新前自定义脚本
-├── diy-part2.sh               # feeds 更新后自定义脚本
+│   ├── cudy-tr3000-512.mk             # TR3000 512MB 自定义 target
+│   ├── mt7981b-cudy-tr3000-512mb-v1.dts
+│   └── 999-*.patch                    # MTK 兼容/HNAT 修复补丁
+├── package/
+│   ├── luci-i18n-minieap-zh-cn/
+│   ├── luci-proto-minieap/
+│   └── minieap-gdufs/
+├── diy-part1.sh                       # feeds 更新前自定义和包迁移
+├── diy-part2.sh                       # feeds 更新后 target/config/default 调整
 └── README.md
 ```
 
-## ⚠️ 注意事项
+## 目标注意事项
 
-- 本仓库只内置 ShawnWrt Packages 里的 `luci-app-shawnwrt-index` 作为主页，其余 ShawnWrt 插件仍不内置
-- TR3000 512MB 固件仅适用于已改版 U-Boot 的 512MB NAND 设备
-- 默认密码：`password`
-- 默认 IP：`192.168.1.1`
+- TR3000 512MB 镜像只适用于已经切到自定义 512MB NAND/U-Boot 布局的设备。
+- 刷机或改 U-Boot 前保留设备自己的 `Factory` 和 `bdinfo` 备份。
+- 依赖本次 LEDE kernel ABI 的内核模块应内置进固件；普通用户态包通常可以走 opkg feeds。
+- MTK 闭源驱动分支是实验分支。成功的 TR3000 构建应包含 `kmod-mt_wifi`、`kmod-conninfra`、`kmod-warp`、`kmod-mediatek_hnat`、`luci-app-mtwifi-cfg`、`luci-app-turboacc-mtk`、`datconf`、`mtwifi-cfg`。
 
 ## 致谢
 
-- [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede) — Lean's LEDE 源码
-- [P3TERX/Actions-OpenWrt](https://github.com/P3TERX/Actions-OpenWrt) — GitHub Actions 编译方案
+- [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede)
+- [P3TERX/Actions-OpenWrt](https://github.com/P3TERX/Actions-OpenWrt)
+- MTK 实验来源：`padavanonly/immortalwrt-mt798x-6.6`
 
----
-
-**Maintained by Shawn Rain**
+Maintained by Shawn Rain.
