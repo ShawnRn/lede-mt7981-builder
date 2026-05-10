@@ -201,3 +201,57 @@ EOT
 exit 0
 EOF
 chmod +x files/etc/uci-defaults/99-shawnwrt-argon
+
+cat > files/etc/uci-defaults/zzzz-shawnwrt-mtk-safe-boot <<'EOF'
+#!/bin/sh
+
+# First mtwifi validation images must prefer a reachable wired boot over
+# automatic acceleration. The MTK modules are included, but loaded manually
+# after SSH login so the failing stage can be identified without serial logs.
+for svc in \
+  turboacc \
+  qmodem_init \
+  qmodem_network \
+  qmodem_led \
+  qmodem_reboot \
+  qmodem_usage_stats \
+  sms_forwarder \
+  ubus-at-daemon; do
+  [ -x "/etc/init.d/$svc" ] && "/etc/init.d/$svc" disable >/dev/null 2>&1
+done
+
+uci -q set turboacc.config.fastpath='none'
+uci -q commit turboacc
+
+exit 0
+EOF
+chmod +x files/etc/uci-defaults/zzzz-shawnwrt-mtk-safe-boot
+
+mkdir -p files/root
+cat > files/root/mtk-driver-test.sh <<'EOF'
+#!/bin/sh
+set -eu
+
+echo "== ShawnWrt MTK driver staged test =="
+echo "Run this from SSH after confirming wired LAN is stable."
+echo
+
+load_one() {
+	local mod="$1"
+	echo "== modprobe $mod =="
+	modprobe "$mod"
+	sleep 3
+	lsmod | grep -E "^${mod}[[:space:]]|^mt_wifi[[:space:]]|^mtk_warp[[:space:]]|^mtkhnat[[:space:]]|^conninfra[[:space:]]" || true
+	logread | tail -n 80 || true
+	echo
+}
+
+load_one conninfra
+load_one mt_wifi
+load_one mtk_warp_proxy
+load_one mtk_warp
+load_one mtkhnat
+
+echo "All staged module loads returned. If the router rebooted, the last printed module is the suspect."
+EOF
+chmod +x files/root/mtk-driver-test.sh

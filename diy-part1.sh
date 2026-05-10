@@ -57,6 +57,19 @@ for pkg in conninfra mt_wifi warp wifi-profile; do
   cp -r "$MTK_TMP/package/mtk/drivers/$pkg" "package/mtk/drivers/$pkg"
 done
 
+# Keep the experimental MTK kernel modules installable, but do not let the
+# image autoload them during early boot. The first TR3000 test image bootlooped
+# before persistent logs were available, so staged manual loading is safer:
+#   modprobe conninfra
+#   modprobe mt_wifi
+#   modprobe mtk_warp_proxy
+#   modprobe mtk_warp
+#   modprobe mtkhnat
+sed -i '/AUTOLOAD:=.*conninfra/d' package/mtk/drivers/conninfra/Makefile
+sed -i '/AUTOLOAD:=.*mt_wifi/d;/AUTOLOAD:=.*mtk_warp_proxy/d;/AutoProbe,mt_wifi/d' \
+  package/mtk/drivers/mt_wifi/Makefile
+sed -i '/AUTOLOAD:=.*mtk_warp/d' package/mtk/drivers/warp/Makefile
+
 # The vendor mt_wifi Makefiles force pre-cal/RLM flags even when the MT7981
 # config disables them. Those flags reference calibration macros that are not
 # present in this source tree, so keep them controlled by Kconfig.
@@ -145,7 +158,6 @@ if ! grep -q 'define KernelPackage/mediatek_hnat' package/kernel/linux/modules/n
 define KernelPackage/mediatek_hnat
   SUBMENU:=$(NETWORK_DEVICES_MENU)
   TITLE:=Mediatek HNAT module
-  AUTOLOAD:=$(call AutoLoad,20,mtkhnat)
   DEPENDS:=@TARGET_mediatek +kmod-nf-conntrack +wireless-tools
   KCONFIG:= \
 	CONFIG_BRIDGE_NETFILTER=y \
