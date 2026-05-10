@@ -92,9 +92,12 @@ for mf in \
 done
 
 # Linux 6.x removed netif_rx_ni(); the driver only needs to pass the skb into
-# the receive path here, so use netif_rx() consistently.
-grep -RIl 'netif_rx_ni' package/mtk/drivers/mt_wifi/src/mt_wifi | \
-  xargs -r sed -i 's/netif_rx_ni(/netif_rx(/g'
+# the receive path here, so use netif_rx() consistently. Some SDK trees keep
+# unpacked sources under package/ while hanwckf keeps them as local dl tarballs.
+if [ -d package/mtk/drivers/mt_wifi/src/mt_wifi ]; then
+  grep -RIl 'netif_rx_ni' package/mtk/drivers/mt_wifi/src/mt_wifi | \
+    xargs -r perl -pi -e 's/netif_rx_ni\(/netif_rx(/g'
+fi
 
 for pkg in datconf mtwifi-cfg luci-app-mtwifi-cfg luci-app-turboacc-mtk; do
   rm -rf "package/mtk/applications/$pkg"
@@ -111,6 +114,19 @@ find "$MTK_WIFI_TMP/dl" -maxdepth 1 -type f \( \
   -name 'mt79xx_conninfra_*.tar.*' -o \
   -name 'warp_*.tar.*' \
 \) -exec cp {} dl/ \;
+
+for archive in dl/mt79xx_*.tar.xz; do
+  [ -f "$archive" ] || continue
+  archive_abs="$(pwd)/$archive"
+  archive_tmp="$(mktemp -d)"
+  tar -xf "$archive_abs" -C "$archive_tmp"
+  if grep -RIl 'netif_rx_ni' "$archive_tmp" >/tmp/mtwifi-netif-rx-files 2>/dev/null; then
+    xargs -r perl -pi -e 's/netif_rx_ni\(/netif_rx(/g' </tmp/mtwifi-netif-rx-files
+    (cd "$archive_tmp" && XZ_OPT=-T0 tar -cJf "$archive_abs" ./*)
+  fi
+  rm -rf "$archive_tmp"
+  rm -f /tmp/mtwifi-netif-rx-files
+done
 
 rm -rf package/lean/mt
 
