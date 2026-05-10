@@ -183,13 +183,27 @@ fi
 # Keep flashed images on rich, browser-free package indexes. Kernel modules
 # still need to be built into the image because this LEDE build has its own ABI.
 mkdir -p files/etc/opkg
-cat > files/etc/opkg/distfeeds.conf <<'EOF'
-src/gz immortalwrt_core https://downloads.immortalwrt.org/releases/24.10.5/targets/mediatek/filogic/packages
-src/gz immortalwrt_base https://downloads.immortalwrt.org/releases/24.10.5/packages/aarch64_cortex-a53/base
-src/gz immortalwrt_luci https://downloads.immortalwrt.org/releases/24.10.5/packages/aarch64_cortex-a53/luci
-src/gz immortalwrt_packages https://downloads.immortalwrt.org/releases/24.10.5/packages/aarch64_cortex-a53/packages
-src/gz immortalwrt_routing https://downloads.immortalwrt.org/releases/24.10.5/packages/aarch64_cortex-a53/routing
-src/gz immortalwrt_telephony https://downloads.immortalwrt.org/releases/24.10.5/packages/aarch64_cortex-a53/telephony
+if grep -q "CONFIG_TARGET_mediatek=y" .config; then
+  TARGET="mediatek/filogic"
+  ARCH="aarch64_cortex-a53"
+elif grep -q "CONFIG_TARGET_x86=y" .config; then
+  TARGET="x86/64"
+  ARCH="x86_64"
+elif grep -q "CONFIG_TARGET_armvirt=y" .config; then
+  TARGET="armvirt/64"
+  ARCH="aarch64_generic"
+else
+  TARGET="x86/64"
+  ARCH="x86_64"
+fi
+
+cat > files/etc/opkg/distfeeds.conf <<EOF
+src/gz immortalwrt_core https://downloads.immortalwrt.org/releases/24.10.5/targets/\${TARGET}/packages
+src/gz immortalwrt_base https://downloads.immortalwrt.org/releases/24.10.5/packages/\${ARCH}/base
+src/gz immortalwrt_luci https://downloads.immortalwrt.org/releases/24.10.5/packages/\${ARCH}/luci
+src/gz immortalwrt_packages https://downloads.immortalwrt.org/releases/24.10.5/packages/\${ARCH}/packages
+src/gz immortalwrt_routing https://downloads.immortalwrt.org/releases/24.10.5/packages/\${ARCH}/routing
+src/gz immortalwrt_telephony https://downloads.immortalwrt.org/releases/24.10.5/packages/\${ARCH}/telephony
 EOF
 : > files/etc/opkg/customfeeds.conf
 

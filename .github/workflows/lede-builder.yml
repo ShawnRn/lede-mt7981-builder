@@ -21,6 +21,8 @@ on:
         options:
           - 'TR3000-512MB'
           - '360T7'
+          - 'x64'
+          - 'arm64'
           - 'all'
       ssh:
         description: '是否执行 make menuconfig (device 为 all 时无效)'
@@ -72,6 +74,8 @@ jobs:
           case "$DEVICE_INPUT" in
             "TR3000-512MB") echo "CONFIG_FILE=config/tr3000-512mb.config" >> $GITHUB_ENV ;;
             "360T7")       echo "CONFIG_FILE=config/360t7.config"       >> $GITHUB_ENV ;;
+            "x64")         echo "CONFIG_FILE=config/x64.config"         >> $GITHUB_ENV ;;
+            "arm64")       echo "CONFIG_FILE=config/arm64.config"       >> $GITHUB_ENV ;;
           esac
 
       - name: 👩‍💻 Copy previous config if exists
@@ -222,7 +226,7 @@ jobs:
 
           # 1. 确定编译列表
           if [ "${DEVICE_INPUT}" = "all" ]; then
-            DEVICES="TR3000-512MB 360T7"
+            DEVICES="TR3000-512MB 360T7 x64 arm64"
           else
             DEVICES="${DEVICE_INPUT}"
           fi
@@ -244,6 +248,8 @@ jobs:
             case "$DEV" in
               "TR3000-512MB") CONFIG="config/tr3000-512mb.config" ;;
               "360T7")       CONFIG="config/360t7.config"       ;;
+              "x64")         CONFIG="config/x64.config"         ;;
+              "arm64")       CONFIG="config/arm64.config"       ;;
             esac
             
             echo "Using Config: $CONFIG"
@@ -258,6 +264,20 @@ jobs:
             mark "$DEV defconfig start"
             STEP_START=$(date +%s)
             make defconfig
+            case "$DEV" in
+              "x64")
+                if ! grep -q '^CONFIG_TARGET_x86_64_DEVICE_generic=y$' .config; then
+                  echo "::warning::x64 target validation failed after defconfig"
+                  grep -E '^CONFIG_TARGET_(x86|x86_64|armsr|armvirt)' .config || true
+                fi
+                ;;
+              "arm64")
+                if ! grep -q '^CONFIG_TARGET_armsr_armv8_DEVICE_generic=y$' .config; then
+                  echo "::warning::arm64 target validation failed after defconfig"
+                  grep -E '^CONFIG_TARGET_(x86|x86_64|armsr|armvirt)' .config || true
+                fi
+                ;;
+            esac
             DEFCONFIG_S=$(elapsed "$STEP_START")
 
             mark "$DEV download start"
@@ -295,7 +315,13 @@ jobs:
           done
 
           echo "📥 Collecting artifacts"
-          find bin/targets/ -name "*sysupgrade.bin" -exec cp {} $GITHUB_WORKSPACE/firmware_collection/ \;
+          find bin/targets/ -type f \( -name "*sysupgrade.bin" -o -name "*.img.gz" -o -name "*.vmdk" -o -name "*.qcow2" \) -exec cp {} $GITHUB_WORKSPACE/firmware_collection/ \;
+          if printf ' %s ' "$DEVICES" | grep -q ' arm64 '; then
+            if ! find "$GITHUB_WORKSPACE/firmware_collection" -type f -name "*armsr-armv8*" -print -quit | grep -q .; then
+              echo "::warning::arm64 artifact validation failed: no armsr-armv8 image was collected"
+              find "$GITHUB_WORKSPACE/firmware_collection" -maxdepth 1 -type f -printf '%f\n' | sort
+            fi
+          fi
           cat "$BUILD_TIMING"
 
           echo "status=success" >> $GITHUB_OUTPUT
@@ -326,10 +352,12 @@ jobs:
 
           ## 📥 Download
 
-          Download the sysupgrade image matching your device:
+          Download the image matching your device:
 
           - **Cudy TR3000 512MB:** asset name contains \`cudy_tr3000-512mb-v1\`
           - **Qihoo 360T7:** asset name contains \`qihoo_360t7\`
+          - **x64:** asset name contains \`x86-64\`
+          - **arm64:** asset name contains \`armsr-armv8\`
 
           ## ⚡ Hardware Acceleration
 
