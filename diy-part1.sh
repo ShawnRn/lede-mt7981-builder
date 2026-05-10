@@ -115,6 +115,7 @@ cp -r "$MTK_TMP/target/linux/mediatek/files-6.6/include/uapi/linux/wapp" \
 
 mkdir -p target/linux/mediatek/patches-6.6
 for patch in \
+  0101-add-mtk-wifi-utility-rbus.patch \
   999-2735-netfilter-nf_flow_table-support-hw-offload-through-v.patch \
   999-2736-net-8021q-support-hardware-flow-table-offload.patch \
   999-2737-net-bridge-support-hardware-flow-table-offload.patch \
