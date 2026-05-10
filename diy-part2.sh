@@ -198,12 +198,12 @@ else
 fi
 
 cat > files/etc/opkg/distfeeds.conf <<EOF
-src/gz immortalwrt_core https://downloads.immortalwrt.org/releases/24.10.5/targets/\${TARGET}/packages
-src/gz immortalwrt_base https://downloads.immortalwrt.org/releases/24.10.5/packages/\${ARCH}/base
-src/gz immortalwrt_luci https://downloads.immortalwrt.org/releases/24.10.5/packages/\${ARCH}/luci
-src/gz immortalwrt_packages https://downloads.immortalwrt.org/releases/24.10.5/packages/\${ARCH}/packages
-src/gz immortalwrt_routing https://downloads.immortalwrt.org/releases/24.10.5/packages/\${ARCH}/routing
-src/gz immortalwrt_telephony https://downloads.immortalwrt.org/releases/24.10.5/packages/\${ARCH}/telephony
+src/gz immortalwrt_core https://downloads.immortalwrt.org/releases/24.10.5/targets/${TARGET}/packages
+src/gz immortalwrt_base https://downloads.immortalwrt.org/releases/24.10.5/packages/${ARCH}/base
+src/gz immortalwrt_luci https://downloads.immortalwrt.org/releases/24.10.5/packages/${ARCH}/luci
+src/gz immortalwrt_packages https://downloads.immortalwrt.org/releases/24.10.5/packages/${ARCH}/packages
+src/gz immortalwrt_routing https://downloads.immortalwrt.org/releases/24.10.5/packages/${ARCH}/routing
+src/gz immortalwrt_telephony https://downloads.immortalwrt.org/releases/24.10.5/packages/${ARCH}/telephony
 EOF
 : > files/etc/opkg/customfeeds.conf
 

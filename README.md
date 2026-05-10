@@ -30,7 +30,7 @@
 - Argon 主题默认值通过 `/etc/uci-defaults/99-shawnwrt-argon` 写入。
 - 镜像内写入 ImmortalWrt 24.10.5 opkg feeds，刷机后可以直接使用更丰富的软件源。
 - MT7981 路由器配置内置 OpenClash LuCI 插件，但不内置 Clash/mihomo core。
-- TR3000、x64、arm64 配置加入 USB 网卡/Modem 支持，包括 RNDIS、CDC Ethernet、iPhone USB 共享网络、CDC NCM、CDC MBIM、Huawei CDC NCM、QModem、USB 打印、USB 工具等。
+- TR3000、x64、arm64 配置加入 USB 网卡/Modem 支持，包括 RNDIS、CDC Ethernet、iPhone USB 共享网络、CDC NCM、CDC MBIM、Huawei CDC NCM、Realtek RTL815x、ASIX AX88179、Aquantia AQC111、QModem、USB 打印、USB 工具等。
 - TR3000 额外包含 USB3、USB 存储、block mount 和常见文件系统支持。
 - 按目标选择硬件加速能力：flow offload、FullCone NAT、BBR；在 MTK 实验分支上还包含 MTK HNAT/WARP/mt_wifi。
 
@@ -108,5 +108,6 @@ gh run list \
 - [coolsnowwolf/lede](https://github.com/coolsnowwolf/lede)
 - [P3TERX/Actions-OpenWrt](https://github.com/P3TERX/Actions-OpenWrt)
 - MTK 实验来源：`padavanonly/immortalwrt-mt798x-6.6`
+- QModem feed：`FUjr/QModem`
 
 Maintained by Shawn Rain.

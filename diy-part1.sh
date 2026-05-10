@@ -184,3 +184,9 @@ fi
 if ! grep -q '^src-git luci_25 ' feeds.conf.default; then
   echo "src-git luci_25 https://github.com/openwrt/luci.git;openwrt-25.12" >> feeds.conf.default
 fi
+
+# Add QModem feed for USB/5G modem management packages selected by the seed
+# configs. Keeping it as a feed avoids vendoring another package tree here.
+if ! grep -q '^src-git qmodem ' feeds.conf.default; then
+  echo "src-git qmodem https://github.com/FUjr/QModem.git;main" >> feeds.conf.default
+fi
