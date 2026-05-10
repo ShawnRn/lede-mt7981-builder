@@ -21,8 +21,6 @@ on:
         options:
           - 'TR3000-512MB'
           - '360T7'
-          - 'x64'
-          - 'arm64'
           - 'all'
       ssh:
         description: '是否执行 make menuconfig (device 为 all 时无效)'
@@ -74,8 +72,6 @@ jobs:
           case "$DEVICE_INPUT" in
             "TR3000-512MB") echo "CONFIG_FILE=config/tr3000-512mb.config" >> $GITHUB_ENV ;;
             "360T7")       echo "CONFIG_FILE=config/360t7.config"       >> $GITHUB_ENV ;;
-            "x64")         echo "CONFIG_FILE=config/x64.config"         >> $GITHUB_ENV ;;
-            "arm64")       echo "CONFIG_FILE=config/arm64.config"       >> $GITHUB_ENV ;;
           esac
 
       - name: 👩‍💻 Copy previous config if exists
@@ -224,9 +220,37 @@ jobs:
             echo "$((end - start))"
           }
 
+          write_distfeeds() {
+            local dev="$1"
+            local target arch
+
+            case "$dev" in
+              "TR3000-512MB"|"360T7")
+                target="mediatek/filogic"
+                arch="aarch64_cortex-a53"
+                ;;
+              *)
+                echo "::error::Unknown device for distfeeds: $dev"
+                exit 1
+                ;;
+            esac
+
+            mkdir -p files/etc/opkg
+            cat > files/etc/opkg/distfeeds.conf <<EOF
+          src/gz immortalwrt_core https://downloads.immortalwrt.org/releases/24.10.5/targets/${target}/packages
+          src/gz immortalwrt_base https://downloads.immortalwrt.org/releases/24.10.5/packages/${arch}/base
+          src/gz immortalwrt_luci https://downloads.immortalwrt.org/releases/24.10.5/packages/${arch}/luci
+          src/gz immortalwrt_packages https://downloads.immortalwrt.org/releases/24.10.5/packages/${arch}/packages
+          src/gz immortalwrt_routing https://downloads.immortalwrt.org/releases/24.10.5/packages/${arch}/routing
+          src/gz immortalwrt_telephony https://downloads.immortalwrt.org/releases/24.10.5/packages/${arch}/telephony
+          EOF
+            sed -i 's/^[[:space:]]*//' files/etc/opkg/distfeeds.conf
+            : > files/etc/opkg/customfeeds.conf
+          }
+
           # 1. 确定编译列表
           if [ "${DEVICE_INPUT}" = "all" ]; then
-            DEVICES="TR3000-512MB 360T7 x64 arm64"
+            DEVICES="TR3000-512MB 360T7"
           else
             DEVICES="${DEVICE_INPUT}"
           fi
@@ -248,8 +272,6 @@ jobs:
             case "$DEV" in
               "TR3000-512MB") CONFIG="config/tr3000-512mb.config" ;;
               "360T7")       CONFIG="config/360t7.config"       ;;
-              "x64")         CONFIG="config/x64.config"         ;;
-              "arm64")       CONFIG="config/arm64.config"       ;;
             esac
             
             echo "Using Config: $CONFIG"
@@ -264,25 +286,12 @@ jobs:
                 fi
                 ;;
             esac
+            write_distfeeds "$DEV"
             
             # 4. 刷新配置并下载
             mark "$DEV defconfig start"
             STEP_START=$(date +%s)
             make defconfig
-            case "$DEV" in
-              "x64")
-                if ! grep -q '^CONFIG_TARGET_x86_64_DEVICE_generic=y$' .config; then
-                  echo "::warning::x64 target validation failed after defconfig"
-                  grep -E '^CONFIG_TARGET_(x86|x86_64|armsr|armvirt)' .config || true
-                fi
-                ;;
-              "arm64")
-                if ! grep -q '^CONFIG_TARGET_armsr_armv8_DEVICE_generic=y$' .config; then
-                  echo "::warning::arm64 target validation failed after defconfig"
-                  grep -E '^CONFIG_TARGET_(x86|x86_64|armsr|armvirt)' .config || true
-                fi
-                ;;
-            esac
             DEFCONFIG_S=$(elapsed "$STEP_START")
 
             mark "$DEV download start"
@@ -290,15 +299,19 @@ jobs:
             make download -j"$NPROC"
             DOWNLOAD_S=$(elapsed "$STEP_START")
 
-            if [ -f "$GITHUB_WORKSPACE/config/mtwifi-qwrt-performance.config" ]; then
-              mark "$DEV mt_wifi diagnostic prerequisites start"
-              make tools/install -j"$NPROC"
-              make toolchain/install -j"$NPROC"
-              make target/linux/compile -j"$NPROC"
-              mark "$DEV mt_wifi diagnostic compile start"
-              make package/mtk/drivers/mt_wifi/compile V=s -j1
-              mark "$DEV mt_wifi diagnostic compile done"
-            fi
+            case "$DEV" in
+              "TR3000-512MB"|"360T7")
+                if [ -f "$GITHUB_WORKSPACE/config/mtwifi-qwrt-performance.config" ]; then
+                  mark "$DEV mt_wifi diagnostic prerequisites start"
+                  make tools/install -j"$NPROC"
+                  make toolchain/install -j"$NPROC"
+                  make target/linux/compile -j"$NPROC"
+                  mark "$DEV mt_wifi diagnostic compile start"
+                  make package/mtk/drivers/mt_wifi/compile V=s -j1
+                  mark "$DEV mt_wifi diagnostic compile done"
+                fi
+                ;;
+            esac
 
             # 5. 开始编译
             mark "$DEV compile start"
@@ -321,12 +334,6 @@ jobs:
 
           echo "📥 Collecting artifacts"
           find bin/targets/ -type f \( -name "*sysupgrade.bin" -o -name "*.img.gz" -o -name "*.vmdk" -o -name "*.qcow2" \) -exec cp {} $GITHUB_WORKSPACE/firmware_collection/ \;
-          if printf ' %s ' "$DEVICES" | grep -q ' arm64 '; then
-            if ! find "$GITHUB_WORKSPACE/firmware_collection" -type f -name "*armsr-armv8*" -print -quit | grep -q .; then
-              echo "::warning::arm64 artifact validation failed: no armsr-armv8 image was collected"
-              find "$GITHUB_WORKSPACE/firmware_collection" -maxdepth 1 -type f -printf '%f\n' | sort
-            fi
-          fi
           cat "$BUILD_TIMING"
 
           echo "status=success" >> $GITHUB_OUTPUT
@@ -361,8 +368,6 @@ jobs:
 
           - **Cudy TR3000 512MB:** asset name contains \`cudy_tr3000-512mb-v1\`
           - **Qihoo 360T7:** asset name contains \`qihoo_360t7\`
-          - **x64:** asset name contains \`x86-64\`
-          - **arm64:** asset name contains \`armsr-armv8\`
 
           ## ⚡ Hardware Acceleration
 

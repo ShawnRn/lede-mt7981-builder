@@ -2,7 +2,7 @@
 
 基于 [Lean's LEDE](https://github.com/coolsnowwolf/lede) 源码，通过 GitHub Actions 自动编译 ShawnWrt 固件。
 
-当前仓库已经不只是两台 MT7981 路由器的编译器，也包含通用 x64 和 ARM64 镜像。`main` 分支保持常规 LEDE 驱动路线；`mtwifi-qwrt-performance` 分支用于实验：整体仍使用 LEDE，但把 MTK SDK 系的 `mt_wifi` / WARP / HNAT 栈迁移进来，用于 TR3000 和 360T7 的高性能无线/硬件加速验证。
+当前仓库只维护两台 MT7981 路由器目标：Cudy TR3000 512MB 和 Qihoo 360T7。`main` 分支保持常规 LEDE 驱动路线；`mtwifi-qwrt-performance` 分支用于实验：整体仍使用 LEDE，但把 MTK SDK 系的 `mt_wifi` / WARP / HNAT 栈迁移进来，用于 TR3000 和 360T7 的高性能无线/硬件加速验证。
 
 ## 支持目标
 
@@ -10,9 +10,7 @@
 | --- | --- | --- | --- |
 | `TR3000-512MB` | MediaTek MT7981B | `cudy_tr3000-512mb-v1` | 适用于已改 512MB NAND/U-Boot 布局的 Cudy TR3000。 |
 | `360T7` | MediaTek MT7981B | `qihoo_360t7` | 128MB NAND 的 360T7。 |
-| `x64` | x86_64 generic | `x86/64` | 通用 x64 虚拟机或裸机镜像。 |
-| `arm64` | ARMv8 generic | `armsr/armv8` | 通用 ARM64 虚拟机/SBC 镜像。 |
-| `all` | 混合 | 全部目标 | 展开为 `TR3000-512MB 360T7 x64 arm64`。 |
+| `all` | MT7981 | 两台路由器 | 展开为 `TR3000-512MB 360T7`。 |
 
 ## 分支说明
 
@@ -30,7 +28,7 @@
 - Argon 主题默认值通过 `/etc/uci-defaults/99-shawnwrt-argon` 写入。
 - 镜像内写入 ImmortalWrt 24.10.5 opkg feeds，刷机后可以直接使用更丰富的软件源。
 - MT7981 路由器配置内置 OpenClash LuCI 插件，但不内置 Clash/mihomo core。
-- TR3000、x64、arm64 配置加入 USB 网卡/Modem 支持，包括 RNDIS、CDC Ethernet、iPhone USB 共享网络、CDC NCM、CDC MBIM、Huawei CDC NCM、Realtek RTL815x、ASIX AX88179、Aquantia AQC111、QModem、USB 打印、USB 工具等。
+- TR3000 配置加入 USB 网卡/Modem 支持，包括 RNDIS、CDC Ethernet、iPhone USB 共享网络、CDC NCM、CDC MBIM、Huawei CDC NCM、Realtek RTL815x、ASIX AX88179、Aquantia AQC111、QModem、USB 打印、USB 工具等。
 - TR3000 额外包含 USB3、USB 存储、block mount 和常见文件系统支持。
 - 按目标选择硬件加速能力：flow offload、FullCone NAT、BBR；在 MTK 实验分支上还包含 MTK HNAT/WARP/mt_wifi。
 
@@ -40,7 +38,7 @@
 
 手动触发参数：
 
-- `device`：`TR3000-512MB`、`360T7`、`x64`、`arm64` 或 `all`。
+- `device`：`TR3000-512MB`、`360T7` 或 `all`。
 - `ssh`：打开临时 tmate menuconfig 会话；`device=all` 时无效。
 - `release`：`true` 时发布到 GitHub Releases；`false` 时仅保留为 workflow artifact。
 
@@ -79,10 +77,8 @@ gh run list \
 │   └── lede-builder.yml               # GitHub Actions 固件编译 workflow
 ├── config/
 │   ├── 360t7.config                   # 360T7 seed config
-│   ├── arm64.config                   # 通用 ARM64 seed config
 │   ├── mtwifi-qwrt-performance.config # MTK 闭源驱动附加配置
-│   ├── tr3000-512mb.config            # TR3000 512MB seed config
-│   └── x64.config                     # 通用 x64 seed config
+│   └── tr3000-512mb.config            # TR3000 512MB seed config
 ├── openwrt-mod/
 │   ├── cudy-tr3000-512.mk             # TR3000 512MB 自定义 target
 │   ├── mt7981b-cudy-tr3000-512mb-v1.dts
